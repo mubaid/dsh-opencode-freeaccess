@@ -1,0 +1,50 @@
+{
+  "name": "dsh-opencode-freeaccess",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "description": "dsh session IDs for opencode, zero config.",
+  "license": "MIT",
+  "author": "mubaid",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mubaid/dsh-opencode-freeaccess.git"
+  },
+  "homepage": "https://github.com/mubaid/dsh-opencode-freeaccess#readme",
+  "bugs": {
+    "url": "https://github.com/mubaid/dsh-opencode-freeaccess/issues"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "opencode",
+    "session-id",
+    "session-affinity",
+    "cordis",
+    "plugin"
+  ],
+  "engines": {
+    "node": ">=20.3",
+    "dsh": "0.2.0-rc.2"
+  },
+  "scripts": {
+    "test": "node test/verify.mjs && node test/smoke-apply.mjs && node test/stdout-hygiene.mjs",
+    "test:live": "node test/verify-live-opencode2.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

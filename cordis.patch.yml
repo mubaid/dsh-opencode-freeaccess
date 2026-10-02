@@ -1,0 +1,33 @@
+# dsh-opencode-freeaccess — attach the dsh session id to opencode requests
+#
+# One insert over the empty profile root. The plugin listens on the
+# `llm/stream` waterfall (the harness's official LLM request interception
+# seam) to scope every streamed call to its conversation session id, and
+# injects session-id headers onto the actual HTTP requests that are sent to
+# opencode endpoints (host suffix "opencode.ai" by default).
+#
+# Default headers mirror opencode's own gateway branch:
+#   x-opencode-session (the session id header the ZEN gateway keys on),
+#   plus the affinity family x-session-affinity / x-client-request-id /
+#   x-session-id, plus opencode's fingerprint headers
+#   (X-OpenCode-Client: cli, User-Agent: opencode/<version>).
+#   Only request headers are modified.
+#
+# Provider routes are matched by name (llm-pi-ai route keys); header
+# injection is matched by URL host. All configurable, e.g.:
+#
+#   - id: opencode-freeaccess
+#     name: 'dsh-opencode-freeaccess'
+#     config:
+#       providers: [opencode, opencode-go]
+#       hosts: [opencode.ai]
+#       baseURLs: []
+#       headers: [x-opencode-session, x-session-affinity, x-client-request-id, x-session-id]
+#       extraHeaders: {}            # explicit {} disables the fingerprint extras
+#       userAgent: ''               # explicit '' keeps the platform UA
+#       sessionIdEnv: ''
+#       verbose: false
+
+- insert:
+    - id: opencode-freeaccess
+      name: 'dsh-opencode-freeaccess'
