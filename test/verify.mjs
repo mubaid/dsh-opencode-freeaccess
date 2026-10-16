@@ -57,7 +57,15 @@ const { streamSimple } = await import(pathToFileURL(join(PI_AI_BASE, "api/openai
 const catalog = JSON.parse(
 	readFileSync(join(PI_AI_BASE, "providers/data/opencode-go.json"), "utf8"),
 );
-const MODEL = { ...catalog["openai-completions"]["deepseek-v4-flash"] };
+// pi-ai 1.x catalogs key chat models as `chat:<id>` (0.x used the bare id);
+// prefer the key carrying a `baseUrl`, which streamSimple requires.
+const MODEL = {
+	...catalog["openai-completions"]["chat:deepseek-v4-flash"],
+	...catalog["openai-completions"]["deepseek-v4-flash"],
+};
+if (typeof MODEL.baseUrl !== "string" || MODEL.baseUrl.length === 0) {
+	throw new Error("verify.mjs: catalog entry has no baseUrl; refusing to drive pi-ai without one");
+}
 const CONTEXT = {
 	systemPrompt: "verify",
 	messages: [{ role: "user", content: "ping", timestamp: Date.now() }],
@@ -147,7 +155,7 @@ const ok = (label) => {
 	const restore = installSessionHeaderFetch({
 		hosts: ["opencode.ai"],
 		baseURLs: [],
-		headerNames: ["x-session-affinity", "x-client-request-id", "x-session-id"],
+		headerNames: ["x-session-affinity", "x-opencode-session-id", "x-session-id"],
 		getSessionId: () => scope.current(),
 	});
 	try {
@@ -159,7 +167,7 @@ const ok = (label) => {
 		assert.ok(String(hit.url).includes("/zen/go/v1/chat/completions"), "chat completions URL: " + hit.url);
 		const headers = new Headers(hit.init.headers);
 		assert.equal(headers.get("x-session-affinity"), "session-test-abc");
-		assert.equal(headers.get("x-client-request-id"), "session-test-abc");
+		assert.equal(headers.get("x-opencode-session-id"), "session-test-abc");
 		assert.equal(headers.get("x-session-id"), "session-test-abc");
 		assert.ok(headers.get("authorization"), "auth header preserved");
 		ok(`pi-ai wire request to ${hit.url} carries all session headers`);
@@ -176,7 +184,7 @@ const ok = (label) => {
 	const restore = installSessionHeaderFetch({
 		hosts: ["opencode.ai"],
 		baseURLs: [],
-		headerNames: ["x-session-affinity", "x-client-request-id"],
+		headerNames: ["x-session-affinity", "x-opencode-session-id"],
 		getSessionId: () => scope.current(),
 	});
 	try {
@@ -365,8 +373,8 @@ const ok = (label) => {
 	assert.deepEqual(cfg.providers, ["opencode", "opencode-go"]);
 	assert.equal(cfg.headers[0], "x-opencode-session", "default leads with opencode's own session header");
 	assert.ok(cfg.headers.includes("x-session-affinity"));
-	assert.deepEqual(cfg.extraHeaders, { "X-OpenCode-Client": "cli" }, "fingerprint extra header on by default");
-	assert.equal(cfg.userAgent, "opencode/1.18.31", "opencode UA on by default");
+	assert.deepEqual(cfg.extraHeaders, { "x-opencode-client": "cli", "x-opencode-project": "global" }, "fingerprint extra headers on by default");
+	assert.equal(cfg.userAgent, "opencode/latest/2.0.29/cli", "opencode UA on by default");
 	assert.deepEqual(normalize({ extraHeaders: {} }).extraHeaders, {}, "explicit {} disables fingerprint extras");
 	assert.equal(normalize({ userAgent: "" }).userAgent, "", "explicit empty UA leaves the platform UA untouched");
 	const tight = normalize({ providers: ["opencode-go"], hosts: ["opencode.ai", ".OC.ai"], headers: ["X-Session-Affinity", "bad header!"], baseURLs: ["https://gw/v1"], sessionIdEnv: "MY_SID", verbose: true, extraHeaders: { "x-opencode-client": "native", "bad name!": "x" }, userAgent: "opencode/1.18.21" });

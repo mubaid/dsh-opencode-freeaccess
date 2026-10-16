@@ -31,6 +31,14 @@ headers: {
 - 对 opencode 网关，会话 ID 走 **`x-opencode-session`**（外加 `x-opencode-client` / `x-opencode-request` / `x-opencode-project` 和 `User-Agent: opencode/<版本>` 指纹头）。
 - `x-session-affinity` / `X-Session-Id` 是 opencode 对普通 OpenAI 兼容端点才用的。
 - opencode 原生会话 id 是 `ses_` + 26 字符格式（如 `ses_0ad7e1b930015SnHnrn3JV9SyS`），非 `session-<uuid>` 格式。
+- 2026-10 实测的 2.0.29 工作请求（`POST https://opencode.ai/inference/openai/v1/chat/completions`，
+  `mimo-v2.6-flash-free`，`stream: true`，`tools: [read, shell]`）额外携带
+  `x-opencode-session-id`；逐头消融显示它与 `x-client-request-id` 一样是惰性的——
+  单独只带它会 403，`x-opencode-session` / `x-session-affinity` / `x-session-id`
+  任一单头即可通过。插件默认头集合跟随工作请求（含 `x-opencode-session-id`），
+  指纹头跟随官方客户端（`x-opencode-client: cli` + `x-opencode-project: global`，
+  `User-Agent: opencode/latest/2.0.29/cli`）。工具门控实测收紧为“必须含 `read`”
+ （`read` 单工具通过，`shell` 单工具 403，空 tools 403）。
 
 另外，pi-ai 库（`@earendil-works/pi-ai`，opencode 自己的 AI 库）内部还有一套 `sendSessionAffinityHeaders` 门控的 affinity 头发射逻辑——默认关，且 dsh 的 `llm-pi-ai` adapter 配置门控刻意 withheld 了该开关，这正是"dsh 已有 `options.sessionId` 却发不出任何会话头"的根因。
 

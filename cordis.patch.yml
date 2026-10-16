@@ -8,9 +8,10 @@
 #
 # Default headers mirror opencode's own gateway branch:
 #   x-opencode-session (the session id header the ZEN gateway keys on),
-#   plus the affinity family x-session-affinity / x-client-request-id /
+#   plus the affinity family x-session-affinity / x-opencode-session-id /
 #   x-session-id, plus opencode's fingerprint headers
-#   (X-OpenCode-Client: cli, User-Agent: opencode/<version>).
+#   (x-opencode-client: cli, x-opencode-project: global,
+#    User-Agent: opencode/latest/<version>/cli).
 #   Only request headers are modified.
 #
 # Provider routes are matched by name (llm-pi-ai route keys); header
@@ -22,7 +23,7 @@
 #       providers: [opencode, opencode-go]
 #       hosts: [opencode.ai]
 #       baseURLs: []
-#       headers: [x-opencode-session, x-session-affinity, x-client-request-id, x-session-id]
+#       headers: [x-opencode-session, x-session-affinity, x-opencode-session-id, x-session-id]
 #       extraHeaders: {}            # explicit {} disables the fingerprint extras
 #       userAgent: ''               # explicit '' keeps the platform UA
 #       sessionIdEnv: ''

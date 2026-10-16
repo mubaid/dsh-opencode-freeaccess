@@ -117,10 +117,11 @@ prompt cache，而不必反复重建。
 |---|---|
 | `x-opencode-session` | OpenCode 网关据以识别会话的请求头 |
 | `x-session-affinity` | 亲和性族，用于缓存与路由 |
-| `x-client-request-id` | Zen 后端期望的逐请求身份 |
+| `x-opencode-session-id` | 官方客户端发送的配套会话请求头 |
 | `x-session-id` | 配套的亲和性请求头 |
-| `X-OpenCode-Client: cli` | 客户端指纹 |
-| `User-Agent: opencode/<version>` | 客户端指纹 |
+| `x-opencode-client: cli` | 客户端指纹 |
+| `x-opencode-project: global` | 官方客户端发送的项目指纹 |
+| `User-Agent: opencode/latest/<version>/cli` | 客户端指纹 |
 
 id 格式就是 OpenCode 自己的：`ses_` 开头，接着是 12 位由会话创建时间导出的 hex，
 再接着 14 位由会话 uuid 导出的字符。一个 dsh 会话在整个生命周期内对应且仅对应
@@ -148,12 +149,13 @@ id 格式就是 OpenCode 自己的：`ses_` 开头，接着是 12 位由会话�
 
 早期阶段，实话实说。一个很小、职责很明确的插件。
 
-- 已在 DeepSeek Harness `0.2.0-rc.2` 上验证。
+- 已在 DeepSeek Harness `0.2.0-rc.2` 和 `0.2.1-alpha.4` 上验证
+ （`engines.dsh: ^0.2.0-rc.2`）。
 - 适用于走 `fetch` 的协议：`openai-completions`、`openai-responses`、
   `anthropic-messages`。
 - Websocket 传输不走 `fetch`，不在支持范围。
-- OpenCode 免费额度要求请求里带有 `bash`、`glob`、`grep`、`read` 这几个工具。dsh
-  自带工具的名字恰好就是这四个，所以默认满足；但关掉其中任何一个，网关都会拒绝
+- OpenCode 免费额度要求请求里带有 `read` 工具（官方客户端发送 `read` +
+  `shell`）。dsh 自带工具的名字恰好包含它，所以默认满足；但关掉它，网关都会拒绝
   该请求。
 - 免费额度里的个别模型偶尔会在 provider 侧因与凭据无关的原因失败，那是上游行为，
   不是插件的问题。

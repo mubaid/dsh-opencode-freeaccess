@@ -1,6 +1,6 @@
 {
   "name": "dsh-opencode-freeaccess",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "lib/index.js",
   "description": "dsh session IDs for opencode, zero config.",
@@ -32,10 +32,10 @@
   ],
   "engines": {
     "node": ">=20.3",
-    "dsh": "0.2.0-rc.2"
+    "dsh": "^0.2.0-rc.2"
   },
   "scripts": {
-    "test": "node test/verify.mjs && node test/smoke-apply.mjs && node test/stdout-hygiene.mjs",
+    "test": "node test/verify.mjs && node test/smoke-apply.mjs && node test/stdout-hygiene.mjs && node test/engines-compat.mjs",
     "test:live": "node test/verify-live-opencode2.mjs"
   },
   "dsh": {

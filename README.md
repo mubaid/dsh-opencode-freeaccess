@@ -124,10 +124,11 @@ The header set, in full:
 |---|---|
 | `x-opencode-session` | The session header the OpenCode gateway keys on |
 | `x-session-affinity` | Affinity family, for cache and routing |
-| `x-client-request-id` | Per-request identity the Zen backend expects |
+| `x-opencode-session-id` | Companion session header the official client sends |
 | `x-session-id` | Companion affinity header |
-| `X-OpenCode-Client: cli` | Client fingerprint |
-| `User-Agent: opencode/<version>` | Client fingerprint |
+| `x-opencode-client: cli` | Client fingerprint |
+| `x-opencode-project: global` | Project fingerprint the official client sends |
+| `User-Agent: opencode/latest/<version>/cli` | Client fingerprint |
 
 The id format is OpenCode's own: `ses_`, then 12 hex characters derived from the
 conversation's creation time, then 14 characters derived from the conversation
@@ -156,14 +157,15 @@ verified are in [VERIFICATION.md](VERIFICATION.md).
 
 Early, and honest about it. A small plugin with a narrow, well-defined job.
 
-- Verified against DeepSeek Harness `0.2.0-rc.2`.
+- Verified against DeepSeek Harness `0.2.0-rc.2` and `0.2.1-alpha.4`
+  (`engines.dsh: ^0.2.0-rc.2`).
 - Works over `fetch`-based protocols: `openai-completions`, `openai-responses`,
   `anthropic-messages`.
 - Websocket transports do not use `fetch` and are not supported.
-- The OpenCode free tier expects the `bash`, `glob`, `grep` and `read` tools to
-  be present in the request. dsh ships tools with exactly those names, so this
-  holds by default, but disabling any of them will make the gateway reject the
-  request.
+- The OpenCode free tier expects the `read` tool to be present in the request
+  (the official client sends `read` + `shell`). dsh ships a tool with exactly
+  that name, so this holds by default, but disabling it will make the gateway
+  reject the request.
 - Individual free-tier models occasionally fail at the provider for reasons
   unrelated to credentials. That is upstream behaviour, not a plugin fault.
 

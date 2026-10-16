@@ -2,8 +2,8 @@
 /**
  * LIVE end-to-end verification for dsh-opencode-freeaccess against the
  * opencode Zen free tier — the `opencode2` provider shape
- * (baseURL https://opencode.ai/zen/v1, api openai-completions, anonymous
- * `public` key).
+ * (baseURL https://opencode.ai/inference/openai/v1, api openai-completions,
+ * anonymous `public` key).
  *
  * Unlike verify.mjs (which stubs fetch), this drives the REAL pi-ai library —
  * the one dsh's `llm-pi-ai` adapter uses — through the REAL network through
@@ -12,12 +12,12 @@
  *
  * It reproduces the four upstream free-tier gates found by bisecting live:
  *   1. `Authorization: Bearer public`  — the LITERAL anonymous key.
- *   2. `User-Agent: opencode/<ver>`.
+ *   2. `User-Agent: opencode/latest/<ver>/cli`.
  *   3. canonical `ses_` session id headers.
- *   4. `tools` must include the file-search quartet {bash, glob, grep, read}
+ *   4. `tools` must include `read` (working shape: `read` + `shell`)
  *      AND `stream: true`.
  * This test also proves gate 4 is satisfied natively: dsh's own built-in tools
- * are named exactly bash/glob/grep/read, so no body injection is required.
+ * include `read`, so no body injection is required.
  *
  * Run:  node test/verify-live-opencode2.mjs
  * Needs network access to opencode.ai. Costs nothing (free tier).
@@ -50,20 +50,21 @@ const PI_AI_BASE = resolvePiAiBase();
 const { streamSimple } = await import(pathToFileURL(join(PI_AI_BASE, "api/openai-completions.js")).href);
 
 /** The `opencode2` provider as configured in the dsh web patch layer. */
-const BASE_URL = "https://opencode.ai/zen/v1";
+const BASE_URL = "https://opencode.ai/inference/openai/v1";
 /** The anonymous free-tier key. The gateway special-cases this exact string. */
 const ANONYMOUS_KEY = "public";
 
 /**
- * dsh's four built-in tools, named exactly as the gateway requires.
+ * The gateway requires the `read` tool on the request (the working
+ * `read` + `shell` shape is used here to mirror the official client).
  *
  * pi-ai does NOT read `context.tools`: it resolves the request `tools` array
  * from the transcript, where declarations live on the system message's
  * `toolsAdded` (see pi-ai `utils/transcript.js` → `resolveTranscriptTools`).
  * That is how dsh's `llm-pi-ai` adapter ships them too, which is why the
- * quartet reaches the wire with no body injection by this plugin.
+ * tools reach the wire with no body injection by this plugin.
  */
-const FINGERPRINT_TOOLS = ["bash", "glob", "grep", "read"];
+const FINGERPRINT_TOOLS = ["read", "shell"];
 const TOOLS = FINGERPRINT_TOOLS.map((name) => ({
 	name,
 	description: `dsh built-in ${name} tool`,
@@ -85,8 +86,8 @@ function transcript(tools) {
 }
 
 const MODEL = {
-	id: "fledge-alpha-free",
-	name: "Fledge Alpha Free",
+	id: "mimo-v2.6-flash-free",
+	name: "Mimo V2.6 Flash Free",
 	api: "openai-completions",
 	provider: "opencode",
 	baseUrl: BASE_URL,
@@ -154,7 +155,7 @@ async function liveChat({ sessionId, tools, stream = true }) {
 	});
 	assert.equal(failure, undefined, `upstream returned an error: ${JSON.stringify(failure)?.slice(0, 400)}`);
 	assert.ok(text.trim().length > 0, "expected non-empty assistant text, got: " + JSON.stringify(text));
-	ok(`live fledge-alpha-free request via plugin headers returned content: ${JSON.stringify(text.trim().slice(0, 60))}`);
+	ok(`live mimo-v2.6-flash-free request via plugin headers returned content: ${JSON.stringify(text.trim().slice(0, 60))}`);
 }
 
 // ── 2. the session headers must actually be on the wire ────────────────────
@@ -203,26 +204,27 @@ async function liveChat({ sessionId, tools, stream = true }) {
 	}
 	assert.ok(/^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$/.test(hit.headers.get("x-opencode-session")), "ses_ id on the wire");
 	assert.equal(hit.headers.get("user-agent"), DEFAULT_USER_AGENT, "opencode UA on the wire");
-	assert.equal(hit.headers.get("x-opencode-client"), DEFAULT_EXTRA_HEADERS["X-OpenCode-Client"], "client fingerprint header on the wire");
+	assert.equal(hit.headers.get("x-opencode-client"), DEFAULT_EXTRA_HEADERS["x-opencode-client"], "client fingerprint header on the wire");
+	assert.equal(hit.headers.get("x-opencode-project"), DEFAULT_EXTRA_HEADERS["x-opencode-project"], "project fingerprint header on the wire");
 	assert.ok(hit.headers.get("authorization")?.includes(ANONYMOUS_KEY), "anonymous public key forwarded untouched");
 	assert.ok(hit.headers.get("content-type")?.includes("application/json"), "json body preserved");
 	ok("wire request carries every session header, the opencode UA, client fingerprint and untouched auth");
 }
 
 // ── 3. document the gate that the key alone does not satisfy ───────────────
-// Without the quartet the gateway 403s; this proves the tools gate is real and
-// that dsh's own tool names are what satisfies it.
+// Without the `read` tool the gateway 403s; this proves the tools gate is real
+// and that dsh's own tool names are what satisfies it.
 {
 	const { failure, text } = await liveChat({
 		sessionId: "session-live-verify-0003",
-		tools: [], // no file-search quartet
+		tools: [], // no read tool
 	});
 	const message = JSON.stringify(failure ?? "");
 	assert.ok(
 		(failure !== undefined && /FreeTierError|free tier/i.test(message)) || text.trim().length === 0,
-		`expected a FreeTierError without the tool quartet, got: ${message.slice(0, 300)}`,
+		`expected a FreeTierError without the read tool, got: ${message.slice(0, 300)}`,
 	);
-	ok("without {bash,glob,grep,read} the free tier rejects — confirming dsh must keep those tools enabled");
+	ok("without {read} the free tier rejects — confirming dsh must keep that tool enabled");
 }
 
 console.log(`\nverify-live-opencode2.mjs: ${passed} checks passed against the live opencode Zen free tier`);
