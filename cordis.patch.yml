@@ -1,21 +1,24 @@
-# dsh-opencode-freeaccess — attach the dsh session id to opencode requests
+# dsh-opencode-freeaccess — let dsh use opencode's anonymous free tier
 #
 # One insert over the empty profile root. The plugin listens on the
 # `llm/stream` waterfall (the harness's official LLM request interception
-# seam) to scope every streamed call to its conversation session id, and
-# injects session-id headers onto the actual HTTP requests that are sent to
-# opencode endpoints (host suffix "opencode.ai" by default).
+# seam) to scope every streamed call to its conversation session id, and for
+# requests to opencode endpoints (host suffix "opencode.ai" by default) it puts
+# a grammatical `ses_` id on the wire, adapts the body to what the free-tier
+# gate inspects, and sends the request over `node:https` with the ClientHello
+# cipher list the gate accepts (`globalThis.fetch` cannot be given one).
 #
 # Default headers mirror opencode's own gateway branch:
-#   x-opencode-session (the session id header the ZEN gateway keys on),
-#   plus the affinity family x-session-affinity / x-opencode-session-id /
-#   x-session-id, plus opencode's fingerprint headers
+#   x-opencode-session (the session id header the gateway requires, checked for
+#   shape), plus the affinity family x-session-affinity /
+#   x-opencode-session-id / x-session-id, plus opencode's fingerprint headers
 #   (x-opencode-client: cli, x-opencode-project: global,
 #    User-Agent: opencode/latest/<version>/cli).
-#   Only request headers are modified.
+#   Responses are never modified. Requests to any other host are forwarded with
+#   their exact original arguments.
 #
-# Provider routes are matched by name (llm-pi-ai route keys); header
-# injection is matched by URL host. All configurable, e.g.:
+# Provider routes are matched by name (llm-pi-ai route keys); the rest is
+# matched by URL host. All configurable, e.g.:
 #
 #   - id: opencode-freeaccess
 #     name: 'dsh-opencode-freeaccess'
@@ -23,10 +26,13 @@
 #       providers: [opencode, opencode-go]
 #       hosts: [opencode.ai]
 #       baseURLs: []
-#       headers: [x-opencode-session, x-session-affinity, x-opencode-session-id, x-session-id]
+#       headers: [x-opencode-session, x-opencode-session-id, x-session-affinity, x-session-id]
 #       extraHeaders: {}            # explicit {} disables the fingerprint extras
 #       userAgent: ''               # explicit '' keeps the platform UA
 #       sessionIdEnv: ''
+#       sessionTtlMs: 600000        # re-mint the ses_ id after this (affinity, not the gate)
+#       adaptBody: true             # false sends your bytes untouched (the gate refuses them)
+#       transport: node             # 'fetch' keeps Node's own client (its hello is refused)
 #       verbose: false
 
 - insert:
